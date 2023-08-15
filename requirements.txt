@@ -1,0 +1,12 @@
+# HuggingFace
+accelerate
+transformers
+
+# PyTorch
+torch
+torchaudio
+
+# Работа с CommonVoice
+datasets
+librosa
+soundfile
