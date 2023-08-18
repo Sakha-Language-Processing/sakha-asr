@@ -62,7 +62,7 @@ def main() -> None:
     before = time()
     filename = "token.txt"
     auth(filename)
-    print(f"Аутентификация в Hugging Face: {time() - before:.2f} с.")
+    print(f"Аутентификация в Hugging Face: {time() - before:.3f} с.")
 
     before = time()
     # Базовая модель с 300 млн параметров для дообучения
@@ -74,25 +74,25 @@ def main() -> None:
     model_lang = "sah"
 
     prepare_pipeline(model_id, model_lang)
-    print(f"Загрузка модели: {time() - before:.2f} с.")
+    print(f"Загрузка модели: {time() - before:.3f} с.")
 
     before = time()
     dataset_lang = "sah"
     prepare_dataset(dataset_lang, "test[:10%]")
     sample = get_data_sample()
-    print(f"Загрузка набора данных: {time() - before:.2f} с.")
+    print(f"Загрузка набора данных: {time() - before:.3f} с.")
 
     before = time()
     transcription = get_transcription(sample)
     print(transcription)
     duration = time() - before
-    print(f"Вывод результата: {duration:.2f} с.")
+    print(f"Вывод результата: {duration:.3f} с.")
 
-    print(f"Прогноз длительности расчета WER: {len(dataset) * duration} с.")
+    print(f"Прогноз длительности расчета WER: {len(dataset) * duration:.3f} с.")
     before = time()
     evaluation = get_evaluation()
     print(f"WER: {evaluation}")
-    print(f"Расчет WER: {time() - before:.2f} с.")
+    print(f"Расчет WER: {time() - before:.3f} с.")
 
 
 def memory_usage():

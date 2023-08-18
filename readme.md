@@ -1,4 +1,4 @@
-# Дообучение модели mms-300m на якутский язык
+# Дообучение модели Facebook MMS на якутский язык
 
 ## Основы
 
@@ -33,14 +33,36 @@ python examples/mms/asr/infer/mms_infer.py \
     --audio "./audio_samples/audio.wav"
 ```
 
-## Использование модели в 
+## Распознавание образцов
 
 ```python
-from transformers import AutoProcessor, AutoModelForPreTraining
+from datasets import Audio, load_dataset
+from transformers import pipeline
 
-processor = AutoProcessor.from_pretrained("facebook/mms-300m")
-model = AutoModelForPreTraining.from_pretrained("facebook/mms-300m")
+data_path = "mozilla-foundation/common_voice_13_0"
+data_lang = "sah"
+dataset = load_dataset(data_path, name=data_lang, split="test")
+datatype = Audio(sampling_rate=16000)
+dataset = dataset.cast_column("audio", datatype)
+sample = next(iter(dataset))
+
+model_id = "facebook/mms-1b-all"
+pipe = pipeline(task="automatic-speech-recognition", model=model_id)
+lang_id = "sah"
+pipe.model.load_adapter(lang_id)
+pipe.tokenizer.set_target_lang(lang_id)
+transcript = pipe(sample)
+
+print(transcript)
 ```
+
+## Текущий результат
+
+В данный момент используется готовая модель MMS-1B-all обученная на 1162 языка.
+
+Модель занимает 13 ± 0.5 Гб в ОЗУ.
+
+WER тестового набора CommonVoice 13.0 для якутского языка: 0.47. 
 
 ## Ссылки
 
