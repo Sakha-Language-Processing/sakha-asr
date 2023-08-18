@@ -1,90 +1,68 @@
-"""
-Проверка работы модели
-"""
-
 import os
 import sys
 from time import time
-from typing import Iterable
+from typing import Any
 
-import evaluate
-import torch
-from datasets import load_dataset, Audio, DatasetDict
+from datasets import load_dataset, Audio, Dataset
+from evaluate import AutomaticSpeechRecognitionEvaluator
 from huggingface_hub import login
 from numpy import ndarray
-from transformers import AutoProcessor, Wav2Vec2ForCTC, Wav2Vec2Processor
+from transformers import AutomaticSpeechRecognitionPipeline, pipeline
 
 
 def auth(filename: str) -> None:
-    """
-    Аутентификация
-    """
     with open(filename) as f:
         token = f.read().strip()
-        login(token)
+        login(token, add_to_git_credential=False)
 
 
-def get_processor(model_id: str, lang_id: str) -> Wav2Vec2Processor:
-    """
-    Обработчик данных
-    """
-    processor = AutoProcessor.from_pretrained(model_id)
-    processor.tokenizer.set_target_lang(lang_id)
-    return processor
+def prepare_pipeline(model_id: str, lang_id: str) -> None:
+    global pipe
+    pipe = pipeline(
+        task="automatic-speech-recognition",
+        model=model_id,
+    )
+    pipe.model.load_adapter(lang_id)
+    pipe.tokenizer.set_target_lang(lang_id)
 
 
-def get_model(model_id: str, lang_id: str) -> Wav2Vec2ForCTC:
-    """
-    Создать модель
-    """
-    model = Wav2Vec2ForCTC.from_pretrained(model_id)
-    model.load_adapter(lang_id)
-    return model
-
-
-def get_data_sample(lang: str, sample_index: int = 0) -> ndarray:
-    """
-    Получить образец данных
-    """
-    path = "common_voice_13_0"
-    dataset = load_dataset(path, lang, split="test", streaming=True)
+def prepare_dataset(lang: str, split: str = "test") -> None:
+    global dataset
+    path = "mozilla-foundation/common_voice_13_0"
+    dataset = load_dataset(path, name=lang, split=split)
     datatype = Audio(sampling_rate=16000)
-    data = dataset.cast_column("audio", datatype)
-    sample = None
-    for index, data_item in enumerate(data):
+    dataset = dataset.cast_column("audio", datatype)
+
+
+def get_data_sample(sample_index: int = 0) -> ndarray:
+    global dataset
+    for index, data_item in enumerate(dataset):
         if index == sample_index:
-            sample = data_item["audio"]["array"]
-            break
-    return sample
+            return data_item["audio"]["array"]
 
 
-def get_prediction(processor: Wav2Vec2Processor,
-                   model: Wav2Vec2ForCTC,
-                   sample: ndarray) -> str:
-    """
-    Получить предсказание
-    """
+def get_transcription(sample: ndarray) -> str:
+    output = pipe(sample)
+    return output["text"]
 
-    inputs = processor(sample, sampling_rate=16_000, return_tensors="pt")
 
-    with torch.no_grad():
-        outputs = model(**inputs).logits
-
-    ids = torch.argmax(outputs, dim=-1)[0]
-    transcription = processor.decode(ids)
-
-    return transcription
+def get_evaluation() -> Any:
+    evaluator = AutomaticSpeechRecognitionEvaluator()
+    evaluator.PIPELINE_KWARGS.pop("truncation")  # Грязный хак
+    result = evaluator.compute(
+        model_or_pipeline=pipe,
+        data=dataset,
+        metric="wer",
+        input_column="audio",
+    )
+    return result["wer"]
 
 
 def main() -> None:
-    """
-    Точка входа
-    """
-
     before = time()
     filename = "token.txt"
     auth(filename)
-    print(f"Аутентификация в Hugging Face: {time() - before:.2f} s")
+    print(f"Аутентификация в Hugging Face: {time() - before:.2f} с.")
 
     before = time()
     # Базовая модель с 300 млн параметров для дообучения
@@ -94,22 +72,30 @@ def main() -> None:
     # Готовая модель с 1 млрд параметров и поддерживающая 1162 языка
     model_id = "facebook/mms-1b-all"
     model_lang = "sah"
-    processor = get_processor(model_id, model_lang)
-    model = get_model(model_id, model_lang)
-    print(f"Загрузка модели и обработчика: {time() - before:.2f} s")
+
+    prepare_pipeline(model_id, model_lang)
+    print(f"Загрузка модели: {time() - before:.2f} с.")
 
     before = time()
-    sample_lang = "sah"
-    sample = get_data_sample(sample_lang)
-    print(f"Загрузка образца данных: {time() - before:.2f} s")
+    dataset_lang = "sah"
+    prepare_dataset(dataset_lang, "test[:10%]")
+    sample = get_data_sample()
+    print(f"Загрузка набора данных: {time() - before:.2f} с.")
 
     before = time()
-    prediction = get_prediction(processor, model, sample)
-    print(prediction)
-    print(f"Вывод результата: {time() - before:.2f} s")
+    transcription = get_transcription(sample)
+    print(transcription)
+    duration = time() - before
+    print(f"Вывод результата: {duration:.2f} с.")
+
+    print(f"Прогноз длительности расчета WER: {len(dataset) * duration} с.")
+    before = time()
+    evaluation = get_evaluation()
+    print(f"WER: {evaluation}")
+    print(f"Расчет WER: {time() - before:.2f} с.")
 
 
-def print_memory_usage():
+def memory_usage():
     pid = os.getpid()
     with open(f"/proc/{pid}/status") as f:
         for line in f.readlines():
@@ -118,7 +104,11 @@ def print_memory_usage():
                 print(f"Memory consumption: {result}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    pipe: AutomaticSpeechRecognitionPipeline
+    dataset: Dataset
+
     main()
+
     if sys.platform == "linux":
-        print_memory_usage()
+        memory_usage()

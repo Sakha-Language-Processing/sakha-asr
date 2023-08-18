@@ -2,7 +2,12 @@
 accelerate
 transformers
 
+# Метрика
+evaluate
+jiwer
+
 # PyTorch
+numpy
 torch
 torchaudio
 
