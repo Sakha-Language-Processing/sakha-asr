@@ -1,3 +1,4 @@
+from os import getenv
 from tempfile import NamedTemporaryFile
 
 from librosa import load
@@ -5,10 +6,7 @@ from telebot import TeleBot
 from telebot.types import Message
 from transformers import pipeline
 
-# Чтение токена для бота
-with open("bot_token.txt") as f:
-    token = f.read().strip()
-bot = TeleBot(token)
+bot = TeleBot(getenv("TG_TOKEN"))
 
 
 # Помощь
@@ -20,7 +18,6 @@ def send_welcome(message: Message):
 
 @bot.message_handler(content_types=["audio", "voice"])
 def echo_all(msg: Message):
-
     # Скачивание записи
     record = msg.audio or msg.voice
     handle = bot.get_file(record.file_id)
@@ -38,11 +35,11 @@ def echo_all(msg: Message):
 
 # Загрузка модели и адаптера
 pipe = pipeline(
-        task="automatic-speech-recognition",
-        model="facebook/mms-1b-all",
-    )
+    task="automatic-speech-recognition",
+    model="facebook/mms-1b-all",
+)
 pipe.model.load_adapter("sah")
 pipe.tokenizer.set_target_lang("sah")
 
-# Запуск бота
+# TODO: надо использовать веб-хуки
 bot.infinity_polling()

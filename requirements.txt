@@ -1,22 +1,12 @@
-# NumPy
-numpy
-
 # PyTorch
 torch
 torchaudio
 
 # HuggingFace
-accelerate
-datasets
 transformers
-
-# Расчет метрик
-evaluate
-jiwer
 
 # Работа с аудиофайлами
 librosa
-soundfile
 
 # Telegram-бот
 pyTelegramBotAPI

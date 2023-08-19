@@ -1,14 +1,5 @@
 # Настройки IDE
 .idea/
 
-# Данные
-common_voice_13_0/
-
-# Токен Telegram-бота
-bot_token.txt
-
-# Токен HuggingFace
-token.txt
-
 # Виртуальное окружение
 venv/
