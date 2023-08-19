@@ -1,17 +1,22 @@
-# HuggingFace
-accelerate
-transformers
-
-# Метрика
-evaluate
-jiwer
+# NumPy
+numpy
 
 # PyTorch
-numpy
 torch
 torchaudio
 
-# Работа с CommonVoice
+# HuggingFace
+accelerate
 datasets
+transformers
+
+# Расчет метрик
+evaluate
+jiwer
+
+# Работа с аудиофайлами
 librosa
 soundfile
+
+# Telegram-бот
+pyTelegramBotAPI
